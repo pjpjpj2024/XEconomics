@@ -1,0 +1,27 @@
+# Core data processing
+pandas
+numpy
+
+# NLP / HuggingFace (script 1 — text summarization)
+transformers
+torch
+pythainlp
+sentencepiece
+
+# HTTP / inference server client (scripts 2, 4, 5, 6)
+requests
+
+# Progress bars
+tqdm
+
+# Time series forecasting (script 3)
+darts
+statsmodels
+scikit-learn
+pytorch-lightning
+
+# Tokenization utility (script 4 — token budget estimation)
+tiktoken
+
+# Date arithmetic (script 5)
+python-dateutil

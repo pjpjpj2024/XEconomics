@@ -1,0 +1,10 @@
+# Ignore all python cache files
+__pycache__/
+*.pyc
+
+# Ignore all actual data and results files
+data/*.csv
+outputs/
+
+# Except keep the hidden gitkeep files so the folders stay on GitHub
+!data/.gitkeep
