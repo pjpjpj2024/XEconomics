@@ -19,19 +19,10 @@ To comply with data privacy and copyright restrictions regarding web-scraped eco
 
 To replicate this forecasting architecture or train the pipeline on an alternative market, populate your local `data/` directory with your own datasets conforming to the following structural naming signatures:
 
-1. 
-`data/All3econnews2017_2026cleaned.csv` — Scraped economic news articles containing at least a text body or summary column.
-
-
+1. `data/All3econnews2017_2026cleaned.csv` — Scraped economic news articles containing at least a text body or summary column.
 2. `data/2017-2025.csv` — Historical macroeconomic time-series tracking indicators (e.g., CPI, GDP, Unemployment) aligned by month.
-3. 
-`data/shap_top3_unique.csv` — Logged SHAP framework local feature weights calculated from your forecasting model.
-
-
-4. 
-`data/pred_direction.csv` — Categorical directional forecasting targets (`direction`) and raw predicted values (`predicted`).
-
-
+3. `data/shap_top3_unique.csv` — Logged SHAP framework local feature weights calculated from your forecasting model.
+4. `data/pred_direction.csv` — Categorical directional forecasting targets (`direction`) and raw predicted values (`predicted`).
 
 ---
 
