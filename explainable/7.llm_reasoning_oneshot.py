@@ -25,7 +25,7 @@ OUTPUT_JSON = config.REASONING_JSON
 
 # Ollama
 OLLAMA_URL        = "http://localhost:11434/api/generate"
-MODEL_NAME        = "gemma2:9b"
+MODEL_NAME        = "gemma2:27b"
 MAX_RETRIES       = 2
 RETRY_SLEEP       = 6
 MAX_OUTPUT_TOKENS = 700
