@@ -1,10 +1,13 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
+import argparse
+import gc
 import json
 import shutil
 import warnings
 from pathlib import Path
+import torch
 
 import numpy as np
 import pandas as pd
@@ -22,17 +25,17 @@ warnings.filterwarnings("ignore")
 # CONFIG
 # ==========================================
 
-DATA_CSV = Path("data/2017-2025.csv")
-RESULTS_DIR = Path("results_backtest")
-ARTIFACTS_DIR = Path("artifacts_backtest")
-CACHE_DIR = Path(".gridsearch_cache_backtest")
+DATA_CSV      = Path("2017-2025.csv")
+RESULTS_DIR   = Path("results_backtest2")
+ARTIFACTS_DIR = Path("artifacts_backtest2")
+CACHE_DIR     = Path(".gridsearch_cache_backtest2")
 
-DATE_COL = "date"
-TARGET_COL = "cci"
+DATE_COL    = "date"
+TARGET_COL  = "cci"
 TRAIN_RATIO = 0.7
-VAL_RATIO = 0.1
-STRIDE = 1
-HORIZONS = list(range(1, 7))
+VAL_RATIO   = 0.1
+STRIDE      = 1
+HORIZONS    = list(range(1, 7))
 
 DL_MODELS = {"BlockRNNModel", "NHiTSModel"}
 
@@ -44,21 +47,21 @@ NEWS_COLS  = [
 ]
 
 FEATURE_SETS = {
-    "cci_only": [],
-    "macro": MACRO_COLS,
-    "news": NEWS_COLS,
+    "cci_only":        [],
+    "macro":           MACRO_COLS,
+    "news":            NEWS_COLS,
     "macro_plus_news": MACRO_COLS + NEWS_COLS,
 }
 
 # ==========================================
 # EARLY STOPPING CALLBACK (DL models only)
 # ==========================================
-_early_stop = EarlyStopping(
-    monitor="val_loss",
-    patience=5,
-    min_delta=0.001,
-    mode="min",
-)
+# _early_stop = EarlyStopping(
+#     monitor="val_loss",
+#     patience=5,
+#     min_delta=0.001,
+#     mode="min",
+# )
 
 PARAM_GRIDS = {
     "ARIMAX": {
@@ -78,38 +81,10 @@ PARAM_GRIDS = {
         "input_chunk_length": list(range(1, 13)),
         "hidden_dim": [32, 64],
         "n_rnn_layers": [1],
-        "n_epochs": [200],
-        "dropout": [0.1],
-        "use_reversible_instance_norm": [True],
-        "pl_trainer_kwargs": [{
-            "accelerator": "gpu",
-            "devices": 1,
-            "strategy": "auto",
-            "enable_progress_bar": False,
-            "enable_model_summary": False,
-            "logger": False,
-            "enable_checkpointing": False,
-            "callbacks": [_early_stop],
-        }],
-        "random_state": [42],
     },
     "NHiTSModel": {
         "input_chunk_length": list(range(1, 13)),
         "layer_widths": [32, 64],
-        "n_epochs": [200],
-        "dropout": [0.1],
-        "use_reversible_instance_norm": [True],
-        "pl_trainer_kwargs": [{
-            "accelerator": "gpu",
-            "devices": 1,
-            "strategy": "auto",
-            "enable_progress_bar": False,
-            "enable_model_summary": False,
-            "logger": False,
-            "enable_checkpointing": False,
-            "callbacks": [_early_stop],
-        }],
-        "random_state": [42],
     },
 }
 
@@ -135,6 +110,44 @@ def get_param_grid(model_name: str, has_covariates: bool) -> dict:
         grid.pop("lags_past_covariates", None)
     return grid
 
+# ==========================================
+# HELPERS
+# ==========================================
+
+def build_trainer_kwargs() -> dict:
+    return {
+        "accelerator": "gpu",
+        "devices": 1,
+        "strategy": "auto",
+        "enable_progress_bar": False,
+        "enable_model_summary": False,
+        "logger": False,
+        "enable_checkpointing": False,
+        "callbacks": [
+            EarlyStopping(
+                monitor="val_loss", 
+                patience=5, 
+                min_delta=0.001, 
+                mode="min")
+        ],
+    }
+
+def build_dl_params(model_name: str, params: dict, horizon: int) -> dict:
+    return {
+        **params,
+        "output_chunk_length":           horizon,
+        "n_epochs":                      100,
+        "dropout":                       0.1,
+        "use_reversible_instance_norm":  True,
+        "random_state":                  42,
+        "pl_trainer_kwargs":             build_trainer_kwargs(),
+    }
+
+def flush_gpu_memory():
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
 
 # ==========================================
 # DATA
@@ -153,6 +166,7 @@ def load_data() -> pd.DataFrame:
     use_cols = [c for c in all_cols if c in df.columns]
     df = df[use_cols].dropna().reset_index(drop=True)
 
+    # remove when all news col are 0
     news_in_df = [c for c in NEWS_COLS if c in df.columns]
     if news_in_df:
         df = df[(df[news_in_df] != 0).any(axis=1)].reset_index(drop=True)
@@ -194,10 +208,10 @@ def make_numpy(df: pd.DataFrame, feature_cols: list):
 # ==========================================
 
 def evaluate_darts(model_name, params, target, past_cov, horizon, is_dl=False):
-    p = {k: v for k, v in params.items() if k not in SKIP_KEYS}
-    p["output_chunk_length"] = horizon
+    # p = {k: v for k, v in params.items() if k not in SKIP_KEYS}
+    # p["output_chunk_length"] = horizon
 
-    model = DARTS_MODEL_CLASSES[model_name](**p)
+    model = DARTS_MODEL_CLASSES[model_name](**params)
     n_total = len(target)
     test_start_idx = int(n_total * (TRAIN_RATIO + VAL_RATIO))
 
@@ -225,6 +239,9 @@ def evaluate_darts(model_name, params, target, past_cov, horizon, is_dl=False):
     except Exception as e:
         print(f"    [SKIP] {e}")
         return None
+    finally:
+        if is_dl:
+            flush_gpu_memory()
 
     actual_ts = target.slice(preds_series.start_time(), preds_series.end_time()).univariate_values()
     pred_ts = preds_series.univariate_values()
@@ -312,18 +329,41 @@ def evaluate_arimax(params, y, exog, dates, horizon):
 # GRIDSEARCH
 # ==========================================
 
-def run_gridsearch(df):
+def run_gridsearch(df, selected_feature_sets=None):
     output_rows = []
 
-    # looop over each feature sets
-    for feature_set_name, feature_cols in tqdm(FEATURE_SETS.items(), desc="Feature sets"):
-        feature_cols = [c for c in feature_cols if c in df.columns]
-        has_covariates = len(feature_cols) > 0
+    feature_sets = FEATURE_SETS
+    if selected_feature_sets:
+        feature_sets = {k: v for k, v in FEATURE_SETS.items() if k in selected_feature_sets}
 
-        # loop over horizons and models
-        for horizon in tqdm(HORIZONS, desc=f"{feature_set_name} horizons", leave=False):
-            for model_name in tqdm(PARAM_GRIDS.keys(), desc=f"h{horizon} models", leave=False):
+    # loop over models
+    for model_name in tqdm(PARAM_GRIDS.keys(), desc="Models", leave=False):
+        # looop over each feature sets
+        for feature_set_name, feature_cols in tqdm(feature_sets.items(), desc="Feature sets"):
+            feature_cols = [c for c in feature_cols if c in df.columns]
+            has_covariates = len(feature_cols) > 0
+            # loop over horizons
+            for horizon in tqdm(HORIZONS, desc=f"{feature_set_name} horizons", leave=False):
                 print(f"\n=== h{horizon} | {model_name} | {feature_set_name} ===")
+
+                # Task-level skip: already completed in a previous run
+                out_dir_check = ARTIFACTS_DIR / feature_set_name / model_name / f"h{horizon}"
+                if (out_dir_check / "params.json").exists() and (out_dir_check / "predictions.csv").exists():
+                    try:
+                        with open(out_dir_check / "params.json", encoding="utf-8") as f:
+                            saved = json.load(f)
+                        print(f"    [SKIP] Already completed (MAPE={saved['mape']:.4f})")
+                        output_rows.append({
+                            "feature_set": feature_set_name,
+                            "model":       model_name,
+                            "horizon":     horizon,
+                            "mape":        saved["mape"],
+                            "rmse":        saved["rmse"],
+                            "params":      json.dumps(saved["best_params"], ensure_ascii=False),
+                        })
+                        continue
+                    except Exception:
+                        pass
 
                 param_grid = get_param_grid(model_name, has_covariates)
                 combinations = list(ParameterGrid(param_grid))
@@ -358,8 +398,12 @@ def run_gridsearch(df):
                             result = evaluate_arimax(params, y, exog, dates, horizon)
                         else:
                             is_dl = model_name in DL_MODELS
+                            full_params = (
+                                build_dl_params(model_name, params, horizon)
+                                if is_dl else {**params, "output_chunk_length": horizon}
+                            )
                             target, past_cov = make_series(df, feature_cols)
-                            result = evaluate_darts(model_name, params, target, past_cov, horizon, is_dl)
+                            result = evaluate_darts(model_name, full_params, target, past_cov, horizon, is_dl)
 
                         if result is None or result[0] is None:
                             continue
@@ -389,8 +433,12 @@ def run_gridsearch(df):
                                 _, best_pred_df = evaluate_arimax(params, y, exog, dates, horizon)
                             else:
                                 is_dl = model_name in DL_MODELS
+                                full_params = (
+                                    build_dl_params(model_name, params, horizon)
+                                    if is_dl else {**params, "output_chunk_length": horizon}
+                                )
                                 target, past_cov = make_series(df, feature_cols)
-                                rerun = evaluate_darts(model_name, params, target, past_cov, horizon, is_dl)
+                                rerun = evaluate_darts(model_name, full_params, target, past_cov, horizon, is_dl)
                                 best_pred_df = rerun[1] if rerun is not None else None
 
                 if best_metrics is None:
@@ -432,24 +480,69 @@ def run_gridsearch(df):
 # MAIN
 # ==========================================
 
+def collect_all_results():
+    """Collect results from all completed artifacts across all runs/jobs."""
+    rows = []
+    if not ARTIFACTS_DIR.exists():
+        return rows
+    for fs_dir in sorted(ARTIFACTS_DIR.iterdir()):
+        if not fs_dir.is_dir():
+            continue
+        for model_dir in sorted(fs_dir.iterdir()):
+            if not model_dir.is_dir():
+                continue
+            for h_dir in sorted(model_dir.iterdir()):
+                if not h_dir.is_dir():
+                    continue
+                params_file = h_dir / "params.json"
+                if params_file.exists():
+                    try:
+                        with open(params_file, encoding="utf-8") as f:
+                            saved = json.load(f)
+                        rows.append({
+                            "feature_set": saved["feature_set"],
+                            "model":       saved["model"],
+                            "horizon":     saved["horizon"],
+                            "mape":        saved["mape"],
+                            "rmse":        saved["rmse"],
+                            "params":      json.dumps(saved["best_params"], ensure_ascii=False),
+                        })
+                    except Exception:
+                        pass
+    return rows
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--feature-sets", type=str, default="all",
+                        help="Comma-separated feature sets to run, or 'all'")
+    args = parser.parse_args()
+
+    selected = None
+    if args.feature_sets != "all":
+        selected = [s.strip() for s in args.feature_sets.split(",")]
+        print(f"Selected feature sets: {selected}")
+
     for d in (RESULTS_DIR, ARTIFACTS_DIR, CACHE_DIR):
         d.mkdir(parents=True, exist_ok=True)
 
     df = load_data()
-    output_rows = run_gridsearch(df)
+    run_gridsearch(df, selected)
 
-    if not output_rows:
+    all_rows = collect_all_results()
+
+    if not all_rows:
         print("No results.")
         return
 
     results = (
-        pd.DataFrame(output_rows)
+        pd.DataFrame(all_rows)
         .sort_values(["feature_set", "horizon", "model"])
         .reset_index(drop=True)
     )
-    results.to_csv(RESULTS_DIR / "results_feature_comparison.csv", index=False, encoding="utf-8-sig")
-    print(f"\nSaved -> {RESULTS_DIR / 'results_feature_comparison.csv'}")
+    result_path = RESULTS_DIR / "results_feature_comparison.csv"
+    results.to_csv(result_path, index=False, encoding="utf-8-sig")
+    print(f"\nSaved -> {result_path}")
 
     pivot = results.pivot_table(
         index="horizon", columns="feature_set", values="mape", aggfunc="min"
@@ -457,8 +550,7 @@ def main():
     print("\n--- Best MAPE per feature set & horizon ---")
     print(pivot.to_string())
 
-    shutil.rmtree(CACHE_DIR, ignore_errors=True)
-    print("\nCache cleaned up.")
+    print("\nCache kept for resuming future runs.")
 
 
 if __name__ == "__main__":
