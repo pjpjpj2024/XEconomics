@@ -25,17 +25,17 @@ warnings.filterwarnings("ignore")
 # CONFIG
 # ==========================================
 
-DATA_CSV      = Path("2017-2025.csv")
-RESULTS_DIR   = Path("results_backtest2")
+DATA_CSV = Path("2017-2025.csv")
+RESULTS_DIR = Path("results_backtest2")
 ARTIFACTS_DIR = Path("artifacts_backtest2")
-CACHE_DIR     = Path(".gridsearch_cache_backtest2")
+CACHE_DIR = Path(".gridsearch_cache_backtest2")
 
-DATE_COL    = "date"
-TARGET_COL  = "cci"
+DATE_COL = "date"
+TARGET_COL = "cci"
 TRAIN_RATIO = 0.7
-VAL_RATIO   = 0.1
-STRIDE      = 1
-HORIZONS    = list(range(1, 7))
+VAL_RATIO = 0.1
+STRIDE = 1
+HORIZONS = list(range(1, 7))
 
 DL_MODELS = {"BlockRNNModel", "NHiTSModel"}
 
@@ -47,21 +47,11 @@ NEWS_COLS  = [
 ]
 
 FEATURE_SETS = {
-    "cci_only":        [],
-    "macro":           MACRO_COLS,
-    "news":            NEWS_COLS,
+    "cci_only": [],
+    "macro": MACRO_COLS,
+    "news": NEWS_COLS,
     "macro_plus_news": MACRO_COLS + NEWS_COLS,
 }
-
-# ==========================================
-# EARLY STOPPING CALLBACK (DL models only)
-# ==========================================
-# _early_stop = EarlyStopping(
-#     monitor="val_loss",
-#     patience=5,
-#     min_delta=0.001,
-#     mode="min",
-# )
 
 PARAM_GRIDS = {
     "ARIMAX": {
@@ -166,7 +156,6 @@ def load_data() -> pd.DataFrame:
     use_cols = [c for c in all_cols if c in df.columns]
     df = df[use_cols].dropna().reset_index(drop=True)
 
-    # remove when all news col are 0
     news_in_df = [c for c in NEWS_COLS if c in df.columns]
     if news_in_df:
         df = df[(df[news_in_df] != 0).any(axis=1)].reset_index(drop=True)
@@ -208,9 +197,6 @@ def make_numpy(df: pd.DataFrame, feature_cols: list):
 # ==========================================
 
 def evaluate_darts(model_name, params, target, past_cov, horizon, is_dl=False):
-    # p = {k: v for k, v in params.items() if k not in SKIP_KEYS}
-    # p["output_chunk_length"] = horizon
-
     model = DARTS_MODEL_CLASSES[model_name](**params)
     n_total = len(target)
     test_start_idx = int(n_total * (TRAIN_RATIO + VAL_RATIO))
@@ -336,17 +322,13 @@ def run_gridsearch(df, selected_feature_sets=None):
     if selected_feature_sets:
         feature_sets = {k: v for k, v in FEATURE_SETS.items() if k in selected_feature_sets}
 
-    # loop over models
     for model_name in tqdm(PARAM_GRIDS.keys(), desc="Models", leave=False):
-        # looop over each feature sets
         for feature_set_name, feature_cols in tqdm(feature_sets.items(), desc="Feature sets"):
             feature_cols = [c for c in feature_cols if c in df.columns]
             has_covariates = len(feature_cols) > 0
-            # loop over horizons
             for horizon in tqdm(HORIZONS, desc=f"{feature_set_name} horizons", leave=False):
                 print(f"\n=== h{horizon} | {model_name} | {feature_set_name} ===")
 
-                # Task-level skip: already completed in a previous run
                 out_dir_check = ARTIFACTS_DIR / feature_set_name / model_name / f"h{horizon}"
                 if (out_dir_check / "params.json").exists() and (out_dir_check / "predictions.csv").exists():
                     try:
