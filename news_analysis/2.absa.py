@@ -8,9 +8,6 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional, List
 import requests
 
-# ========================================
-# CONFIGURATION
-# ========================================
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -25,9 +22,8 @@ MODEL_NAME = "gemma2:27b"  # Change to your desired model
 TEMPERATURE = 0.1
 MAX_RETRIES = 3
 
-# Processing Limits
 PROCESS_LIMIT = None  # for testing
-# ========================================
+
 
 FACTORS = {
     "เศรษฐกิจไทย": "General macroeconomic indicators (GDP, inflation, interest rates).",
@@ -69,9 +65,6 @@ Return ONLY valid JSON with fields: sentiment_score, Aspect, effect_type.
 Ensure Aspect is from the allowed list.
 """
 
-# -----------------------------
-# LOGIC FUNCTIONS
-# -----------------------------
 def get_impact_type(score: float) -> str:
     if score >= 0.60: return "Positive"
     if score <= 0.40: return "Negative"
@@ -108,9 +101,7 @@ def validate_and_fix(obj: Dict[str, Any]) -> Dict[str, Any]:
         obj["effect_type"] = "Short-term"
     return obj
 
-# -----------------------------
-# MAIN PIPELINE
-# -----------------------------
+
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     fpath = os.path.join(OUTPUT_DIR, OUTPUT_FILENAME)
@@ -118,7 +109,6 @@ def main():
     print(f"Starting processing with {MODEL_NAME}...")
     print(f"Results will be saved to <3: {fpath}")
 
-    # Load CSV
     rows = []
     if not os.path.exists(INPUT_CSV):
         print(f"Error: File not found at {INPUT_CSV}")
@@ -135,9 +125,7 @@ def main():
         print("The CSV file appears to be empty.")
         return
 
-    # -----------------------------
-    # RESUME LOGIC
-    # -----------------------------
+
     processed = 0
     if os.path.exists(fpath):
         with open(fpath, "r", encoding="utf-8-sig") as f:
@@ -171,10 +159,8 @@ def main():
 
         final_result["impact_type"] = get_impact_type(final_result["sentiment_score"])
 
-        # Merge news data with LLM results
         output_row = {**r, **final_result}
 
-        # Append to the single master file
         file_exists = os.path.isfile(fpath)
         with open(fpath, "a", encoding="utf-8-sig", newline="") as out_f:
             writer = csv.DictWriter(out_f, fieldnames=output_row.keys())

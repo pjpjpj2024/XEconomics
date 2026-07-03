@@ -24,12 +24,12 @@ SUMMARY_COL = "summary"
 
 # Generation Parameters
 BATCH_SIZE = 4         
-SAVE_EVERY = 20         # Save progress to CSV every 20 rows
+SAVE_EVERY = 20         
 MAX_INPUT_LENGTH = 1024    
 GEN_MIN_TOKENS = 100     
 GEN_MAX_TOKENS = 200      
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-# =================================
+
 
 def clean_thai_text(text):
     if pd.isna(text) or str(text).strip() == "":
@@ -76,11 +76,9 @@ def main():
 
     df = pd.read_csv(INPUT_CSV)
     
-    # identify missing summary rows
     mask = df[SUMMARY_COL].isna() | (df[SUMMARY_COL].astype(str).str.strip() == "")
     df_todo = df[mask].copy()
 
-    # apply TRY_ROWS limit for testing
     if TRY_ROWS is not None:
         print(f"--- TEST MODE: Only processing first {TRY_ROWS} rows ---")
         df_todo = df_todo.head(TRY_ROWS)
@@ -91,7 +89,6 @@ def main():
 
     model, tokenizer = load_model_and_tokenizer(MODEL_NAME)
     
-    # generate summaries in batches
     for i in tqdm(range(0, len(df_todo), BATCH_SIZE), desc="Summarizing"):
         batch_indices = df_todo.index[i : i + BATCH_SIZE]
         batch_texts = df_todo.loc[batch_indices, TEXT_COL].tolist()
@@ -103,11 +100,9 @@ def main():
             print(f"Error at batch starting index {i}: {e}")
             df.loc[batch_indices, SUMMARY_COL] = "ERROR"
 
-        # Checkpoint
         if (i + BATCH_SIZE) % SAVE_EVERY == 0:
             df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8-sig')
 
-    # Final save
     df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8-sig')
     print(f"\nDone! Processed {len(df_todo)} rows. Results saved to {OUTPUT_CSV}")
 

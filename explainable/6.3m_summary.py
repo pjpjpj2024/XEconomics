@@ -7,9 +7,6 @@ from tqdm import tqdm
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-# ==========================================
-# CONFIG
-# ==========================================
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -27,15 +24,14 @@ OUTPUT_DIR = config.THREEM_DIR
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_CSV = config.THREEM_CSV
 
-# Ollama
 OLLAMA_URL        = "http://localhost:11434/api/generate"
-MODEL_NAME        = "gemma2:27b"
+MODEL_NAME        = "gemma2:9b"
 MAX_RETRIES       = 2
 RETRY_SLEEP       = 6
 MAX_OUTPUT_TOKENS = 400
 OLLAMA_TIMEOUT    = 180
 
-# Fixed fallback outputs when evidence does not align with indicator definition
+
 NO_ALIGN_POS = "ไม่มีข้อมูลสัญญาณบวกที่สอดคล้องกับตัวชี้วัดนี้"
 NO_ALIGN_NEG = "ไม่มีข้อมูลสัญญาณลบที่สอดคล้องกับตัวชี้วัดนี้"
 
@@ -59,9 +55,6 @@ FEATURE_ASPECT_MAP = {
 }
 FALLBACK_ASPECTS = ["เศรษฐกิจไทย"]
 
-# ==========================================
-# INDICATOR DEFINITIONS
-# ==========================================
 INDICATOR_DEFINITIONS = {
     "cpi":          "ดัชนีราคาผู้บริโภค (CPI) สะท้อนการเปลี่ยนแปลงของค่าครองชีพโดยรวม ครอบคลุมราคาสินค้าเกษตร ราคาพลังงานและน้ำมันเชื้อเพลิง รวมถึงภาวะเศรษฐกิจที่กระทบกำลังซื้อของผู้บริโภค",
     "gdp":          "ผลิตภัณฑ์มวลรวมในประเทศ (GDP) สะท้อนการเติบโตหรือหดตัวของเศรษฐกิจโดยรวม รายได้ประชาชาติ และความแข็งแกร่งของการจ้างงานในประเทศ",
@@ -71,9 +64,6 @@ INDICATOR_DEFINITIONS = {
 }
 DEFAULT_DEFINITION = "ตัวชี้วัดเศรษฐกิจที่กระทบค่าครองชีพและความเชื่อมั่นของผู้บริโภค"
 
-# ==========================================
-# UTILITIES
-# ==========================================
 
 def clean_text(s) -> str:
     """Clean whitespace and remove markdown fences / invisible chars."""
@@ -82,20 +72,11 @@ def clean_text(s) -> str:
     return re.sub(r"\s+", " ", s.replace("```", " ").replace("\u200b", " ")).strip()
 
 def strip_feature_tag(feature: str) -> str:
-    """
-    Remove trailing lag suffix from SHAP feature name.
-    Example:
-      cpi_pastcov_lag-3 -> cpi
-      import_pastcov_lag_1 -> import
-    """
+
     return re.sub(r"_pastcov_lag[-_]\d+$", "", str(feature), flags=re.IGNORECASE)
 
 def get_aspects(feature: str) -> list:
-    """
-    Map SHAP feature → monthly summary aspect list.
-    If exact aspect exists already, use it directly.
-    Otherwise match indicator keywords via FEATURE_ASPECT_MAP.
-    """
+
     base = strip_feature_tag(feature)
     if base in VALID_ASPECTS:
         return [base]
@@ -107,9 +88,7 @@ def get_aspects(feature: str) -> list:
     return FALLBACK_ASPECTS
 
 def get_definition(feature: str) -> str:
-    """
-    Map SHAP feature → indicator definition to inject into LLM prompt.
-    """
+
     base = strip_feature_tag(feature).lower()
     for k, v in INDICATOR_DEFINITIONS.items():
         if k in base:
@@ -117,7 +96,6 @@ def get_definition(feature: str) -> str:
     return DEFAULT_DEFINITION
 
 def get_shap_direction(shap_value: float) -> str:
-    """Human-readable SHAP sign interpretation."""
     if shap_value > 0:
         return "ส่งผลบวกต่อ CCI"
     elif shap_value < 0:
@@ -149,12 +127,6 @@ def query_ollama(prompt: str) -> str:
                 return f"[OLLAMA_ERROR] {e}"
 
 def normalize_llm_summary(text: str, mode: str = "pos") -> str:
-    """
-    Normalize LLM output:
-      - clean text
-      - preserve OLLAMA errors
-      - if fallback phrase is present anywhere, collapse to exact fallback phrase
-    """
     text = clean_text(text)
 
     if not text or text.startswith("[OLLAMA_ERROR]"):
@@ -172,14 +144,6 @@ def normalize_llm_summary(text: str, mode: str = "pos") -> str:
     return text
 
 def pull_window(df_monthly, current_month_dt, aspects: list):
-    """
-    Pull 3-month evidence window merging across all mapped aspects.
-
-    For each month back in [3,2,1]:
-      - collect all rows matching the mapped aspects
-      - concatenate positive summaries
-      - concatenate negative summaries
-    """
     window_rows = []
 
     for months_back in [3, 2, 1]:
@@ -211,10 +175,6 @@ def pull_window(df_monthly, current_month_dt, aspects: list):
         })
 
     return window_rows
-
-# ==========================================
-# PROMPT BUILDERS check alignment between evidence and indicator definition
-# ==========================================
 
 def build_prompt_pos(aspects, window_rows, definition, display_feat):
     aspect_str = " / ".join(aspects)
@@ -314,9 +274,6 @@ def build_prompt_neg(aspects, window_rows, definition, display_feat):
 
 บทสรุปสัญญาณลบ:"""
 
-# ==========================================
-# OUTPUT
-# ==========================================
 
 def init_output() -> None:
     """Remove existing output file so each run starts fresh."""
@@ -345,9 +302,6 @@ def append_row(row: dict) -> None:
             encoding="utf-8-sig",
         )
 
-# ==========================================
-# MAIN
-# ==========================================
 
 def main():
     print("Loading files...")
@@ -355,11 +309,9 @@ def main():
     df_shap    = pd.read_csv(SHAP_PATH,            encoding="utf-8-sig")
     df_pred    = pd.read_csv(PRED_PATH,            encoding="utf-8-sig")
 
-    # Standardize month to to YYYY-MM
     df_monthly["Month"] = df_monthly["Month"].astype(str).str.strip().str[:7]
     df_pred["date"]     = df_pred["date"].astype(str).str.strip().str[:7]
 
-    # Find matched shap date col
     shap_date_col = next(
         (c for c in df_shap.columns if c.strip().lower() in {
             "date", "month", "forecast_month", "target_month", "ym"
@@ -378,7 +330,6 @@ def main():
     for col in ["Positive_Summary", "Negative_Summary", "Aspect"]:
         df_monthly[col] = df_monthly[col].astype(str).apply(clean_text)
 
-    # Build target month range
     start_dt      = datetime.strptime(f"{START_MONTH}-01", "%Y-%m-%d")
     end_dt        = datetime.strptime(f"{END_MONTH}-01",   "%Y-%m-%d")
     target_months = pd.date_range(start=start_dt, end=end_dt, freq="MS")
@@ -389,13 +340,11 @@ def main():
     for current_month_dt in tqdm(target_months, desc="Months"):
         month_str = current_month_dt.strftime("%Y-%m")
 
-        # Get prediction row for current month
         pred_row = df_pred[df_pred["date"] == month_str]
         if pred_row.empty:
             print(f"  [!] No prediction data for {month_str} — skipping")
             continue
 
-        # Get SHAP rows for current month
         shap_month = df_shap[df_shap["date"] == month_str].copy()
         if shap_month.empty:
             print(f"  [!] No SHAP data for {month_str} — skipping")
@@ -404,7 +353,7 @@ def main():
         shap_month["base"] = shap_month[shap_feat_col].apply(strip_feature_tag)
         top_features = (
             shap_month
-            .sort_values("ABS_SHAP", ascending=False)
+            .sort_values("abs_shap", ascending=False)
             .drop_duplicates(subset="base", keep="first")
             .head(TOP_K)
         )
@@ -414,7 +363,7 @@ def main():
 
             feat     = clean_text(str(row[shap_feat_col]))
             shap_val = float(row.get("SHAP_Value", row.get("shap_value", 0)))
-            abs_shap = float(row.get("ABS_SHAP", abs(shap_val)))
+            abs_shap = float(row.get("abs_shap", abs(shap_val)))
 
             d_feat   = strip_feature_tag(feat) # to rm lag suffix
             asps     = get_aspects(feat)
@@ -422,7 +371,6 @@ def main():
             shap_dir = get_shap_direction(shap_val)
             print(f"    [display_feat] raw_feature={feat} | display_feat={d_feat}")
 
-            # Pull 3-month window
             win = pull_window(df_monthly, current_month_dt, asps)
 
             all_empty = all(not w["pos"] and not w["neg"] for w in win)
@@ -434,9 +382,8 @@ def main():
                 months_with_pos = [w for w in win if w["pos"]]
                 months_with_neg = [w for w in win if w["neg"]]
 
-                # -------------------------
+
                 # Positive summary
-                # -------------------------
                 if len(months_with_pos) == 0:
                     pos_summary = "ไม่พบสัญญาณบวกที่ชัดเจนในช่วงนี้"
                 elif len(months_with_pos) == 1:
@@ -451,9 +398,7 @@ def main():
                     )
                     pos_summary = normalize_llm_summary(query_ollama(p_prompt), mode="pos")
 
-                # -------------------------
                 # Negative summary
-                # -------------------------
                 if len(months_with_neg) == 0:
                     neg_summary = "ไม่พบสัญญาณลบที่ชัดเจนในช่วงนี้"
                 elif len(months_with_neg) == 1:

@@ -6,10 +6,9 @@
 
 ```bash
 pip install -r requirement.txt
-
 ```
 
-This default framework requires [Ollama](https://ollama.com) running locally for LLM inference (scripts 2, 4, 5, 6) using the `gemma2:27b` model.
+This default framework requires [Ollama](https://ollama.com) running locally for LLM inference (scripts 2, 5, 6, 7) using the `gemma2:27b` model.
 
 ---
 
@@ -24,6 +23,8 @@ To replicate this forecasting architecture or train the pipeline on an alternati
 3. `data/shap_top3_unique.csv` — Logged SHAP framework local feature weights calculated from your forecasting model.
 4. `data/pred_direction.csv` — Categorical directional forecasting targets (`direction`) and raw predicted values (`predicted`).
 
+See `data/README.md` for exact column schemas and formatting requirements for each file.
+
 ---
 
 ## Pipeline
@@ -35,9 +36,10 @@ Run the scripts sequentially in order:
 | `news_analysis/1.text_summarization.py` | Summarize raw news articles using local translation architectures. |
 | `news_analysis/2.absa.py` | Aspect-Based Sentiment Analysis categorization using LLM. |
 | `forecasting/3.backtest.py` | Train and evaluate time-series forecasting models. |
-| `explainable/4.monthly_summary.py` | Cluster positive and negative monthly narratives per economic domain aspect. |
-| `explainable/5.3m_summary.py` | Generate consolidated 3-month lookback evidence text per feature. |
-| `explainable/6.llm_reasoning_oneshot.py` | Synthesize final structured senior economist reasoning reports. |
+| `forecasting/4.predict_latest.py` | Generate the latest forecast and SHAP feature importances. |
+| `explainable/5.monthly_summary.py` | Cluster positive and negative monthly narratives per economic domain aspect. |
+| `explainable/6.3m_summary.py` | Generate consolidated 3-month lookback evidence text per feature. |
+| `explainable/7.llm_reasoning_oneshot.py` | Synthesize final structured senior economist reasoning reports. |
 
 ---
 
@@ -58,5 +60,4 @@ The configuration layer utilizes dynamic resolution logic (`DATA_ROOT = Path(__f
   journal={Manuscript under review},
   year={2026}
 }
-
 ```

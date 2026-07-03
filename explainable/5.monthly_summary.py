@@ -12,9 +12,7 @@ try:
 except Exception:
     ENC = None
 
-# ==========================================
 # CONFIG
-# ==========================================
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -26,11 +24,11 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_CSV = config.MONTHLY_CSV
 
 
-TARGET_YEARS = [2024, 2025]
+TARGET_YEARS = config.TARGET_YEARS
 
 # Ollama
 OLLAMA_URL        = "http://localhost:11434/api/generate"
-MODEL_NAME        = "gemma2:27b"
+MODEL_NAME        = "gemma2:9b"
 MAX_RETRIES       = 2
 RETRY_SLEEP       = 6
 MAX_OUTPUT_TOKENS = 500
@@ -49,10 +47,6 @@ ASPECTS = [
     "เศรษฐกิจโลก",
     "เศรษฐกิจไทย",
 ]
-
-# ==========================================
-# UTILITIES
-# ==========================================
 
 def clean_text(s: str) -> str:
     if not isinstance(s, str):
@@ -100,7 +94,6 @@ def query_ollama(prompt: str) -> str:
                 return f"[OLLAMA_ERROR] {e}"
 
 def chunk_by_budget(summaries: list, budget: int) -> list:
-    """Split list of summaries into chunks that fit within token budget."""
     chunks, cur, cur_tok = [], [], 0
     for s in summaries:
         s = clean_text(s)
@@ -117,19 +110,9 @@ def chunk_by_budget(summaries: list, budget: int) -> list:
         chunks.append(cur)
     return chunks
 
-# ==========================================
 # PROMPT BUILDERS
-# ==========================================
 
 def prompt_summarize(month: str, aspect: str, sentiment_side: str, news_block: str) -> str:
-    """
-    Main summarization prompt for one polarity side.
-    Fixed issues:
-    - No bullet points / numbered lists allowed
-    - No relevance commentary allowed
-    - Must summarize what is given regardless of quality
-    - No outside knowledge
-    """
     return f"""คุณเป็นผู้ช่วยวิเคราะห์ข่าวเศรษฐกิจไทย
 หน้าที่ของคุณ: สรุปภาพรวมของสัญญาณ{sentiment_side}ในหมวด "{aspect}" ประจำเดือน {month}
 
@@ -181,30 +164,21 @@ def prompt_reduce(month: str, aspect: str, sentiment_side: str, chunk_summaries:
 
 บทสรุปสุดท้าย (ย่อหน้าเดียว ห้ามใช้ข้อหรือ bullet):"""
 
-# ==========================================
-# CORE SUMMARIZATION
-# ==========================================
-
 def summarize_side(month: str, aspect: str, sentiment_side: str, summaries: list) -> str:
-    """
-    Summarize one polarity side (Positive or Negative) for a given month+aspect.
-    Uses map-reduce chunking if total tokens exceed INPUT_TOKEN_BUDGET.
-    """
     n = len(summaries)
     if n == 0:
-        return ""  # No news on this side — leave blank
+        return ""  
     if n == 1:
-        return clean_text(summaries[0])  # Single news — copy directly
+        return clean_text(summaries[0])  
 
     total_tokens = sum(count_tokens(s) for s in summaries)
 
-    # if not exceed 6_000
     if total_tokens <= INPUT_TOKEN_BUDGET:
         block  = build_news_block(summaries)
         prompt = prompt_summarize(month, aspect, sentiment_side, block)
         return query_ollama(prompt)
 
-    # if exceed 
+
     print(f"    [map-reduce] {month} | {aspect} | {sentiment_side} | tokens={total_tokens}")
     chunks = chunk_by_budget(summaries, CHUNK_TOKEN_BUDGET)
     chunk_results = []
@@ -216,10 +190,6 @@ def summarize_side(month: str, aspect: str, sentiment_side: str, summaries: list
 
     reduce_prompt = prompt_reduce(month, aspect, sentiment_side, chunk_results)
     return query_ollama(reduce_prompt)
-
-# ==========================================
-# RESUME LOGIC
-# ==========================================
 
 def load_done_keys() -> set:
     """Load already completed (Month, Aspect) pairs to support resume."""
@@ -241,9 +211,6 @@ def append_row(row: dict) -> None:
     else:
         df_row.to_csv(OUTPUT_CSV, mode="w", header=True, index=False, encoding="utf-8-sig")
 
-# ==========================================
-# MAIN
-# ==========================================
 
 def main():
     print("Loading ABSA CSV...")
@@ -255,7 +222,6 @@ def main():
     if missing:
         raise ValueError(f"Missing columns: {missing}. Found: {list(df.columns)}")
 
-    # Parse dates and filter target years
     df["published_at"] = pd.to_datetime(df["published_at"], errors="coerce")
     df = df[df["published_at"].notna()].copy()
     df["Year"]  = df["published_at"].dt.year
@@ -287,10 +253,8 @@ def main():
             aspect_df = aspect_df[aspect_df["summary"].str.len() > 0]
 
             if aspect_df.empty:
-                continue  # No news for this month+aspect — skip entirely
+                continue  
 
-            # --- Split by polarity ---
-            # Neutral is excluded
             pos_summaries = aspect_df[aspect_df["impact_type"] == "Positive"]["summary"].tolist()
             neg_summaries = aspect_df[aspect_df["impact_type"] == "Negative"]["summary"].tolist()
             pos_count     = len(pos_summaries)
