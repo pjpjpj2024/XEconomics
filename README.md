@@ -4,11 +4,25 @@
 
 ## Requirements
 
+### Environment
+
+- Python 3.10 or newer (tested with Python 3.10.17)
+- [Ollama](https://ollama.com) (for local LLM inference)
+- A machine with enough GPU VRAM or system RAM to run your local LLM model
+
+Install Python dependencies:
+
 ```bash
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
-This default framework requires [Ollama](https://ollama.com) running locally for LLM inference (scripts 2, 5, 6, 7) using the `gemma2:27b` model.
+Pull the required Ollama model (e.g. `gemma2:27b`):
+
+```bash
+ollama pull gemma2:27b
+```
+
+This is used for LLM inference in scripts 2, 5, 6, and 7.
 
 ---
 
@@ -54,10 +68,10 @@ The configuration layer utilizes dynamic resolution logic (`DATA_ROOT = Path(__f
 ## Citation
 
 ```bibtex
-@article{jarusawee2026xeconomics,
+@unpublished{jarusawee2026xeconomics,
   title={XEconomics: An Explainable System for News-Driven Economic Forecasting},
   author={Jarusawee, P. and et al.},
-  journal={Manuscript under review},
+  notes={Manuscript under review},
   year={2026}
 }
 ```
