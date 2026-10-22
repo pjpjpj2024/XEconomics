@@ -38,3 +38,8 @@ dependencies = [
 [tool.uv]
 # Scripts only, not an installable package
 package = false
+# darts caps numba (and so llvmlite) below the versions with Python 3.14 wheels,
+# but only on macOS Intel. Lift the cap everywhere else.
+override-dependencies = [
+    "numba==0.64.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+]

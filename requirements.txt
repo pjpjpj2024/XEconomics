@@ -19,6 +19,9 @@ tqdm==4.70.1
 # Time series forecasting (script 3)
 darts==0.47.0; python_full_version < "3.11"
 darts==0.48.1; python_full_version >= "3.11"
+# darts caps numba/llvmlite on macOS Intel only; llvmlite 0.46 has Python 3.14 wheels
+numba==0.64.0; sys_platform != "darwin" or platform_machine != "x86_64"
+llvmlite==0.46.0; sys_platform != "darwin" or platform_machine != "x86_64"
 statsmodels==0.15.0
 scikit-learn==1.7.2; python_full_version < "3.11"
 scikit-learn==1.9.1; python_full_version >= "3.11"
