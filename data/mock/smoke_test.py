@@ -2,8 +2,7 @@
 
 Mock CSV follows data/readme.md: date, cci, cpi, gdp, unemployment_rate,
 impi, expi, plus the eight news sentiment columns.
-Reuses the real functions from forecasting/3.backtest.py; only the trainer
-is switched from GPU to CPU because this machine has no CUDA device.
+Reuses the real functions from forecasting/3.backtest.py.
 """
 import importlib.util
 import sys
@@ -47,14 +46,6 @@ feature_cols = bt.MACRO_COLS + bt.NEWS_COLS
 target, past_cov = bt.make_series(data, feature_cols)
 
 # ---- 3. darts models, one horizon, one param combo each --------------------
-bt.build_trainer_kwargs = lambda: {
-    "accelerator": "cpu",
-    "devices": 1,
-    "enable_progress_bar": False,
-    "enable_model_summary": False,
-    "logger": False,
-    "enable_checkpointing": False,
-}
 horizon = 2
 checks = {
     "XGBModel": {"lags": 3, "lags_past_covariates": 3, "n_estimators": 50,

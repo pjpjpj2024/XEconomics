@@ -39,6 +39,7 @@ ABSA_FINAL_CSV      = ABSA_OUTPUT_DIR / "absa_results.csv"
 FORECAST_DATA_CSV      = DATA_ROOT / "data/2017-2025.csv"
 FORECAST_RESULTS_DIR   = DATA_ROOT / "outputs/forecasting/results_backtest"
 FORECAST_ARTIFACTS_DIR = DATA_ROOT / "outputs/forecasting/artifacts_backtest"
+FORECAST_CACHE_DIR     = DATA_ROOT / "outputs/forecasting/gridsearch_cache_backtest"
 
 # ----------------------------------------------------------------
 # Script 4 — Latest Forecast + SHAP (H1-H3)
