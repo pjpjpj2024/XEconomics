@@ -6,10 +6,18 @@
 
 from pathlib import Path
 
+import torch
+
 # ----------------------------------------------------------------
 # ROOT: Automatically detects your local project folder!
 # ----------------------------------------------------------------
 DATA_ROOT = Path(__file__).resolve().parent
+
+# ----------------------------------------------------------------
+# Device: GPU when CUDA is available, otherwise CPU
+# ----------------------------------------------------------------
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+LIGHTNING_ACCELERATOR = "gpu" if DEVICE == "cuda" else "cpu"
 
 # ----------------------------------------------------------------
 # Shared Pipeline Configurations

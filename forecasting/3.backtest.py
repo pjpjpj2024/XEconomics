@@ -110,7 +110,7 @@ def get_param_grid(model_name: str, has_covariates: bool) -> dict:
 
 def build_trainer_kwargs() -> dict:
     return {
-        "accelerator": "gpu" if torch.cuda.is_available() else "cpu",
+        "accelerator": config.LIGHTNING_ACCELERATOR,
         "devices": 1,
         "strategy": "auto",
         "enable_progress_bar": False,
