@@ -1,0 +1,45 @@
+[project]
+name = "xeconomics"
+version = "0.1.0"
+description = "An Explainable System for News-Driven Economic Forecasting"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    # Core data processing
+    "pandas==2.3.3; python_full_version < '3.11'",
+    "pandas==3.0.6; python_full_version >= '3.11'",
+    "numpy==2.2.6; python_full_version < '3.11'",
+    "numpy==2.3.5; python_full_version >= '3.11'",
+    # NLP / HuggingFace (script 1 — text summarization)
+    "transformers==5.20.2",
+    "torch==2.14.1",
+    "pythainlp==5.4.0",
+    "sentencepiece==0.2.2",
+    # HTTP / inference server client (scripts 2, 4, 5, 6)
+    "requests==2.34.2",
+    # Progress bars
+    "tqdm==4.70.1",
+    # Time series forecasting (script 3)
+    "darts==0.47.0; python_full_version < '3.11'",
+    "darts==0.48.1; python_full_version >= '3.11'",
+    "statsmodels==0.15.0",
+    "scikit-learn==1.7.2; python_full_version < '3.11'",
+    "scikit-learn==1.9.1; python_full_version >= '3.11'",
+    "pytorch-lightning==2.6.6",
+    "xgboost==3.0.5; python_full_version < '3.11'",
+    "xgboost==3.2.0; python_full_version >= '3.11' and python_full_version < '3.12'",
+    "xgboost==3.4.1; python_full_version >= '3.12'",
+    # Tokenization utility (script 4 — token budget estimation)
+    "tiktoken==0.14.0",
+    # Date arithmetic (script 5)
+    "python-dateutil==2.9.0.post0",
+]
+
+[tool.uv]
+# Scripts only, not an installable package
+package = false
+# darts caps numba (and so llvmlite) below the versions with Python 3.14 wheels,
+# but only on macOS Intel. Lift the cap everywhere else.
+override-dependencies = [
+    "numba==0.64.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+]

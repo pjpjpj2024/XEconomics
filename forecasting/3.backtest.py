@@ -5,6 +5,7 @@ import argparse
 import gc
 import json
 import shutil
+import sys
 import warnings
 from pathlib import Path
 import torch
@@ -19,16 +20,19 @@ from sklearn.model_selection import ParameterGrid
 from pytorch_lightning.callbacks import EarlyStopping
 from tqdm import tqdm
 
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+import config
+
 warnings.filterwarnings("ignore")
 
 # ==========================================
 # CONFIG
 # ==========================================
 
-DATA_CSV = Path("2017-2025.csv")
-RESULTS_DIR = Path("results_backtest2")
-ARTIFACTS_DIR = Path("artifacts_backtest2")
-CACHE_DIR = Path(".gridsearch_cache_backtest2")
+DATA_CSV = config.FORECAST_DATA_CSV
+RESULTS_DIR = config.FORECAST_RESULTS_DIR
+ARTIFACTS_DIR = config.FORECAST_ARTIFACTS_DIR
+CACHE_DIR = config.FORECAST_CACHE_DIR
 
 DATE_COL = "date"
 TARGET_COL = "cci"
@@ -106,7 +110,7 @@ def get_param_grid(model_name: str, has_covariates: bool) -> dict:
 
 def build_trainer_kwargs() -> dict:
     return {
-        "accelerator": "gpu",
+        "accelerator": config.LIGHTNING_ACCELERATOR,
         "devices": 1,
         "strategy": "auto",
         "enable_progress_bar": False,

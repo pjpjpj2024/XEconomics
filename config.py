@@ -6,10 +6,18 @@
 
 from pathlib import Path
 
+import torch
+
 # ----------------------------------------------------------------
 # ROOT: Automatically detects your local project folder!
 # ----------------------------------------------------------------
 DATA_ROOT = Path(__file__).resolve().parent
+
+# ----------------------------------------------------------------
+# Device: GPU when CUDA is available, otherwise CPU
+# ----------------------------------------------------------------
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+LIGHTNING_ACCELERATOR = "gpu" if DEVICE == "cuda" else "cpu"
 
 # ----------------------------------------------------------------
 # Shared Pipeline Configurations
@@ -39,6 +47,7 @@ ABSA_FINAL_CSV      = ABSA_OUTPUT_DIR / "absa_results.csv"
 FORECAST_DATA_CSV      = DATA_ROOT / "data/2017-2025.csv"
 FORECAST_RESULTS_DIR   = DATA_ROOT / "outputs/forecasting/results_backtest"
 FORECAST_ARTIFACTS_DIR = DATA_ROOT / "outputs/forecasting/artifacts_backtest"
+FORECAST_CACHE_DIR     = DATA_ROOT / "outputs/forecasting/gridsearch_cache_backtest"
 
 # ----------------------------------------------------------------
 # Script 4 — Latest Forecast + SHAP (H1-H3)

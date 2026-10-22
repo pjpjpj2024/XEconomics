@@ -6,15 +6,39 @@
 
 ### Environment
 
-- Python 3.10 or newer (tested with Python 3.10.17)
+- Python 3.10, 3.11, 3.12, 3.13 or 3.14 (tested on all five)
 - [Ollama](https://ollama.com) (for local LLM inference)
 - A machine with enough GPU VRAM or system RAM to run your local LLM model
 
-Install Python dependencies:
+> **Note on `llvmlite`:** `darts` depends on `numba` and `llvmlite`. Older `llvmlite` releases (before 0.46) have no Python 3.14 wheel and fail to build from source. The pins in `pyproject.toml` and `requirements.txt` use `llvmlite` 0.46 and `numba` 0.64 to avoid this. On macOS Intel, `darts` still caps these packages, so Python 3.14 is not covered there.
 
-```bash
-pip install -r requirements.txt
-```
+#### Install with uv (recommended)
+
+Install [uv](https://docs.astral.sh/uv/), then create the environment. uv downloads the requested Python version if it is not installed:
+
+| Python | Command |
+| --- | --- |
+| 3.10 | `uv sync --python 3.10` |
+| 3.11 | `uv sync --python 3.11` |
+| 3.12 | `uv sync --python 3.12` |
+| 3.13 | `uv sync --python 3.13` |
+| 3.14 | `uv sync --python 3.14` |
+
+This creates `.venv/` from `uv.lock`. Run scripts with `uv run`, for example `uv run python forecasting/3.backtest.py`.
+
+#### Install with pip
+
+Use a Python interpreter you have already installed. Replace `python3.10` with `python3.11`, `python3.12`, `python3.13` or `python3.14` as needed:
+
+| Python | Command |
+| --- | --- |
+| 3.10 | `python3.10 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+| 3.11 | `python3.11 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+| 3.12 | `python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+| 3.13 | `python3.13 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+| 3.14 | `python3.14 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+
+`requirements.txt` and `pyproject.toml` pin the same versions for each Python version.
 
 Pull the required Ollama model (e.g. `gemma2:27b`):
 
