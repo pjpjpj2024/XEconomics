@@ -6,15 +6,37 @@
 
 ### Environment
 
-- Python 3.10 or newer (tested with Python 3.10.17)
+- Python 3.10, 3.11, 3.12 or 3.13 (tested on all four)
 - [Ollama](https://ollama.com) (for local LLM inference)
 - A machine with enough GPU VRAM or system RAM to run your local LLM model
 
-Install Python dependencies:
+> **Python 3.14 is not supported.** `darts` depends on `llvmlite`, which has no Python 3.14 wheel and fails to build from source. Use one of the versions above.
 
-```bash
-pip install -r requirements.txt
-```
+#### Install with uv (recommended)
+
+Install [uv](https://docs.astral.sh/uv/), then create the environment. uv downloads the requested Python version if it is not installed:
+
+| Python | Command |
+| --- | --- |
+| 3.10 | `uv sync --python 3.10` |
+| 3.11 | `uv sync --python 3.11` |
+| 3.12 | `uv sync --python 3.12` |
+| 3.13 | `uv sync --python 3.13` |
+
+This creates `.venv/` from `uv.lock`. Run scripts with `uv run`, for example `uv run python forecasting/3.backtest.py`.
+
+#### Install with pip
+
+Use a Python interpreter you have already installed. Replace `python3.10` with `python3.11`, `python3.12` or `python3.13` as needed:
+
+| Python | Command |
+| --- | --- |
+| 3.10 | `python3.10 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+| 3.11 | `python3.11 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+| 3.12 | `python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+| 3.13 | `python3.13 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` |
+
+`requirements.txt` and `pyproject.toml` pin the same versions for each Python version.
 
 Pull the required Ollama model (e.g. `gemma2:27b`):
 
