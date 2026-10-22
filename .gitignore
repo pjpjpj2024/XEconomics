@@ -8,3 +8,5 @@ outputs/
 
 # Except keep the hidden gitkeep files so the folders stay on GitHub
 !data/.gitkeep
+# Local virtual environment (uv)
+.venv/
