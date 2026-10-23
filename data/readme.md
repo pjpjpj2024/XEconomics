@@ -16,6 +16,9 @@ Forecast output. Columns: `date` (`YYYY-MM`), `predicted` (float), `direction` (
 ## `shap_top3_unique.csv`
 SHAP feature importance per month. Columns: a date column (`date`/`month`/`target_month`), a feature name column, and a SHAP value column (`SHAP_Value` or `shap_value`).
 
+## `test/runtime_cal.py`
+Runtime estimator for `forecasting/3.backtest.py`. Runs one sample fit per model type (ARIMAX, XGBModel, LSTM, NHiTS) against the real data, then extrapolates total wall-clock time for the full grid search.
+
 ---
 
 Any forecasting model or feature-attribution method can be substituted here, as XEconomics' components are independently interchangeable — the downstream pipeline only depends on the column formats above, not on how they were produced.

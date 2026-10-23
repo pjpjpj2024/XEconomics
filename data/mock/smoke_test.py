@@ -70,8 +70,7 @@ assert res[0] is not None, "ARIMAX returned no metrics"
 print(f"ARIMAX         OK  mape={res[0]['mape']} rmse={res[0]['rmse']} rows={len(res[1])}")
 
 # ---- 5. script 4 path: XGB gridsearch + ShapExplainer (mirrors 4.predict_latest.py)
-# 4.predict_latest.py cannot be imported as-is (see import note), so this mirrors it.
-best_model, best_params, metric = XGBModel.gridsearch(
+_, best_params, metric = XGBModel.gridsearch(
     parameters={"lags": [2, 3], "lags_past_covariates": [2], "n_estimators": [50],
                 "max_depth": [3], "learning_rate": [0.1], "output_chunk_length": [3]},
     series=target, past_covariates=past_cov, forecast_horizon=3, stride=1,
