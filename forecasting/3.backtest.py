@@ -1,23 +1,23 @@
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import argparse
 import gc
 import json
-import shutil
 import sys
 import warnings
 from pathlib import Path
-import torch
 
 import numpy as np
 import pandas as pd
+import torch
 from darts import TimeSeries
-from darts.models import XGBModel, BlockRNNModel, NHiTSModel
 from darts.dataprocessing.transformers import Scaler
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from sklearn.model_selection import ParameterGrid
+from darts.models import BlockRNNModel, NHiTSModel, XGBModel
 from pytorch_lightning.callbacks import EarlyStopping
+from sklearn.model_selection import ParameterGrid
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from tqdm import tqdm
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -59,9 +59,9 @@ FEATURE_SETS = {
 
 PARAM_GRIDS = {
     "ARIMAX": {
-        "p": list(range(0, 13)),
-        "d": list(range(0, 3)),
-        "q": list(range(0, 13)),
+        "p": list(range(13)),
+        "d": list(range(3)),
+        "q": list(range(13)),
     },
     "XGBModel": {
         "lags": list(range(1, 13)),
@@ -206,17 +206,17 @@ def evaluate_darts(model_name, params, target, past_cov, horizon, is_dl=False):
     test_start_idx = int(n_total * (TRAIN_RATIO + VAL_RATIO))
 
     try:
-        hfc_kwargs = dict(
-            series=target,
-            past_covariates=past_cov,
-            forecast_horizon=horizon,
-            stride=STRIDE,
-            start=target.time_index[test_start_idx],
-            retrain=True,
-            last_points_only=True,
-            verbose=False,
-            show_warnings=False,
-        )
+        hfc_kwargs = {
+            "series": target,
+            "past_covariates": past_cov,
+            "forecast_horizon": horizon,
+            "stride": STRIDE,
+            "start": target.time_index[test_start_idx],
+            "retrain": True,
+            "last_points_only": True,
+            "verbose": False,
+            "show_warnings": False,
+        }
 
         if is_dl:
             hfc_kwargs["val_length"] = int(n_total * VAL_RATIO)

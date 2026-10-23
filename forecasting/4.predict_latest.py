@@ -2,14 +2,10 @@ import warnings
 from pathlib import Path
 
 import pandas as pd
-import numpy as np
-
 from darts import TimeSeries
-from darts.models import XGBModel
-from darts.metrics import mape
 from darts.explainability import ShapExplainer
-
-from pipeline.forecasting.backtest import make_series
+from darts.metrics import mape
+from darts.models import XGBModel
 
 warnings.filterwarnings("ignore")
 
@@ -27,6 +23,19 @@ NEWS_COLS  = [
 ]
 
 FEATURE_COLS = MACRO_COLS + NEWS_COLS
+
+
+def make_series(df: pd.DataFrame, feature_cols: list) -> tuple:
+    target = TimeSeries.from_dataframe(
+        df, time_col=DATE, value_cols=TARGET, freq="MS"
+    )
+    past_cov = None
+    if feature_cols:
+        past_cov = TimeSeries.from_dataframe(
+            df, time_col=DATE, value_cols=feature_cols, freq="MS"
+        )
+    return target, past_cov
+
 
 PARAMS = {
     "lags": list(range(1, 13)),
@@ -66,7 +75,7 @@ def main():
     OUT_PATH = Path("predict_outputs_h3")
     OUT_PATH.mkdir(exist_ok=True)
 
-    best_model, best_params, metrics = XGBModel.gridsearch(
+    _, best_params, metrics = XGBModel.gridsearch(
         parameters=PARAMS,
         series=target,
         past_covariates=past_cov,
@@ -88,7 +97,7 @@ def main():
     pred = model.predict(
         n=HORIZON,
         series=target,
-        past_covariates= past_cov
+        past_covariates=past_cov
     )
 
     print(f"\nForecast for {HORIZON} months ahead:")
