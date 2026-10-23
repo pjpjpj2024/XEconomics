@@ -1,6 +1,9 @@
 import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# must be set before torch is imported (config.py imports torch)
+os.environ["PYTHONHASHSEED"] = "42"
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 import argparse
 import gc
@@ -15,6 +18,7 @@ import torch
 from darts import TimeSeries
 from darts.dataprocessing.transformers import Scaler
 from darts.models import BlockRNNModel, NHiTSModel, XGBModel
+from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from sklearn.model_selection import ParameterGrid
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -24,6 +28,11 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 import config
 
 warnings.filterwarnings("ignore")
+
+seed_everything(config.GLOBAL_SEED, workers=True)
+torch.use_deterministic_algorithms(True, warn_only=True)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 # ==========================================
 # CONFIG
@@ -133,7 +142,7 @@ def build_dl_params(model_name: str, params: dict, horizon: int) -> dict:
         "n_epochs":                      100,
         "dropout":                       0.1,
         "use_reversible_instance_norm":  True,
-        "random_state":                  42,
+        "random_state":                  config.MODEL_SEED,
         "pl_trainer_kwargs":             build_trainer_kwargs(),
     }
 
@@ -386,7 +395,7 @@ def run_gridsearch(df, selected_feature_sets=None):
                             is_dl = model_name in DL_MODELS
                             full_params = (
                                 build_dl_params(model_name, params, horizon)
-                                if is_dl else {**params, "output_chunk_length": horizon}
+                                if is_dl else {**params, "output_chunk_length": horizon, "random_state": config.MODEL_SEED}
                             )
                             target, past_cov = make_series(df, feature_cols)
                             result = evaluate_darts(model_name, full_params, target, past_cov, horizon, is_dl)
@@ -421,7 +430,7 @@ def run_gridsearch(df, selected_feature_sets=None):
                                 is_dl = model_name in DL_MODELS
                                 full_params = (
                                     build_dl_params(model_name, params, horizon)
-                                    if is_dl else {**params, "output_chunk_length": horizon}
+                                    if is_dl else {**params, "output_chunk_length": horizon, "random_state": config.MODEL_SEED}
                                 )
                                 target, past_cov = make_series(df, feature_cols)
                                 rerun = evaluate_darts(model_name, full_params, target, past_cov, horizon, is_dl)

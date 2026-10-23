@@ -20,6 +20,12 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LIGHTNING_ACCELERATOR = "gpu" if DEVICE == "cuda" else "cpu"
 
 # ----------------------------------------------------------------
+# Reproducibility Seeds
+# ----------------------------------------------------------------
+GLOBAL_SEED = 42
+MODEL_SEED = 42
+
+# ----------------------------------------------------------------
 # Shared Pipeline Configurations
 # ----------------------------------------------------------------
 START_MONTH  = "2025-06"

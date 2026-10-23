@@ -1,19 +1,32 @@
+import os
+import sys
 import warnings
 from pathlib import Path
 
+# must be set before torch is imported (config.py imports torch)
+os.environ["PYTHONHASHSEED"] = "42"
+
 import pandas as pd
+import torch
 from darts import TimeSeries
 from darts.explainability import ShapExplainer
 from darts.metrics import mape
 from darts.models import XGBModel
+from pytorch_lightning import seed_everything
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+import config
 
 warnings.filterwarnings("ignore")
 
+seed_everything(config.GLOBAL_SEED, workers=True)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
-DATA = Path('data/2017-2025.csv')
+DATA = config.FORECAST_DATA_CSV
 DATE = "date"
 TARGET = "cci"
-HORIZON = 3
+HORIZON = config.PREDICT_HORIZON
 
 MACRO_COLS = ["cpi", "gdp", "unemployment_rate", "impi", "expi"]
 NEWS_COLS  = [
@@ -43,7 +56,8 @@ PARAMS = {
     "n_estimators": [100, 200],
     "max_depth": [3, 4],
     "learning_rate": [0.05, 0.1],
-    "output_chunk_length": [HORIZON]
+    "output_chunk_length": [HORIZON],
+    "random_state": [config.MODEL_SEED],
 }
 
 def load_data() -> pd.DataFrame:
@@ -72,8 +86,8 @@ def main():
     feature_cols = [c for c in FEATURE_COLS if c in df.columns]
     target, past_cov = make_series(df, feature_cols)
 
-    OUT_PATH = Path("predict_outputs_h3")
-    OUT_PATH.mkdir(exist_ok=True)
+    OUT_PATH = config.PREDICT_OUTPUT_DIR
+    OUT_PATH.mkdir(parents=True, exist_ok=True)
 
     _, best_params, metrics = XGBModel.gridsearch(
         parameters=PARAMS,
