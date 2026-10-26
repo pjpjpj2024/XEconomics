@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import warnings
@@ -108,6 +109,13 @@ def main():
     model = XGBModel(**best_params)
     model.fit(series=target, past_covariates=past_cov)
 
+    model.save(str(OUT_PATH / "xgb_best_model"))
+    print(f"Saved model to {OUT_PATH / 'xgb_best_model'}")
+
+    with open(OUT_PATH / "best_params.json", "w") as f:
+        json.dump(best_params, f, indent=2, default=str)
+    print("Saved best_params.json")
+
     pred = model.predict(
         n=HORIZON,
         series=target,
@@ -170,6 +178,11 @@ def main():
     shap_all = pd.concat(all_rows, ignore_index=True)
     shap_all.to_csv(OUT_PATH / "shap_values.csv", index=False, encoding="utf-8-sig")
     print("Saved shap_values.csv")
- 
+
+    shap_h1 = explaination.get_shap_explanation_object(horizon=1)
+    feature_matrix = pd.DataFrame(shap_h1.data, columns=shap_h1.feature_names)
+    feature_matrix.to_csv(OUT_PATH / "feature_matrix.csv", index=False, encoding="utf-8-sig")
+    print(f"Saved feature_matrix.csv ({feature_matrix.shape[0]} rows x {feature_matrix.shape[1]} cols)")
+
 if __name__ == "__main__":
     main()
